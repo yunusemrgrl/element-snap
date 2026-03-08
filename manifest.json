@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Element Snap MVP",
+  "version": "1.0",
+  "description": "Snap web elements and annotate them easily.",
+  "permissions": [
+    "debugger",
+    "storage",
+    "downloads",
+    "unlimitedStorage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_title": "Capture & Edit"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["editor.html", "jspdf.umd.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Ekran Görüntüsü / Seçim Alma Modunu Başlat"
+    }
+  }
+}

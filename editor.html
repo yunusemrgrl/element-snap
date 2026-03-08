@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Element Snap Premium Düzenleyici</title>
+  <script src="jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #1a1b1e;
+      --panel-bg: rgba(30, 31, 35, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --text-main: #ffffff;
+      --text-muted: #9ca3af;
+      --accent: #22d3ee;
+      --accent-hover: #06b6d4;
+      --tool-hover: rgba(255, 255, 255, 0.1);
+      --tool-active: rgba(255, 255, 255, 0.15);
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+      background: radial-gradient(circle at 50% -20%, #374151, #111827, #030712);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Işın efektleri için arka plan (isteğe bağlı dekoratif) */
+    .bg-rays {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-conic-gradient(from 0deg, transparent 0deg 10deg, rgba(255,255,255,0.02) 10deg 20deg);
+      opacity: 0.3;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .editor-container {
+      position: relative;
+      z-index: 10;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(30, 31, 35, 0.65);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .tools-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--panel-border);
+      margin: 0 8px;
+    }
+
+    .icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover { background: var(--tool-hover); }
+    .icon-btn.active { background: var(--tool-active); color: var(--accent); }
+
+    .icon-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+
+    /* Color picker button */
+    .color-btn-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+    }
+    .color-btn-wrapper:hover { background: var(--tool-hover); }
+    
+    .color-preview {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #22d3ee, #3b82f6); /* Default gradient/color */
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    #colorPicker {
+      position: absolute;
+      opacity: 0;
+      width: 100%; height: 100%;
+      cursor: pointer;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      gap: 8px;
+    }
+
+    .zoom-controls button {
+      background: transparent; border: none; color: white; cursor: pointer;
+      font-weight: 600; font-size: 16px; width: 24px; height: 24px; padding: 0;
+      border-radius: 4px;
+    }
+    .zoom-controls button:hover { background: var(--tool-hover); }
+
+    /* Canvas Area */
+    .workspace {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at center, #2a2a35 0%, #1a1a20 100%);
+      overflow: hidden; /* For custom panning if needed */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transition: transform 0.1s;
+      transform-origin: center center;
+    }
+
+    canvas {
+      display: block;
+      border-radius: 4px; /* Canvas'ın sert köşelerini çok hafif yumuşat */
+    }
+
+    #drawCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      pointer-events: auto;
+    }
+
+    /* Crop Overlay UI (Pure CSS styling over canvas if we want, or drawn logic) */
+
+    /* Bottom Toolbar */
+    .bottom-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-top: 1px solid var(--panel-border);
+      background: rgba(20, 20, 25, 0.4);
+    }
+
+    .bottom-left h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .export-formats {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 2px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .format-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .format-btn:hover { color: white; }
+    .format-btn.active {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    .bottom-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08); /* panel-border equivalent */
+      background: rgba(255,255,255,0.05);
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-btn:hover { background: rgba(255,255,255,0.1); }
+
+    .btn-download {
+      background: #2dd4bf; /* Gradient/Cyan matching image */
+      color: #0f172a;
+      border: none;
+      padding: 0 20px;
+      height: 36px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(45, 212, 191, 0.35);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-download:hover {
+      background: #14b8a6;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(45, 212, 191, 0.5);
+    }
+    .btn-download:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 15px rgba(34, 211, 238, 0.4);
+    }
+
+    /* Crop Rect Style (Rendered in JS, but UI lines) */
+    .crop-overlay {
+      position: absolute;
+      border: 1px dashed rgba(255, 255, 255, 0.8);
+      background: rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+      display: none;
+      z-index: 50;
+    }
+
+    .crop-handle {
+      position: absolute;
+      width: 10px; height: 10px;
+      background: white;
+      border: 1px solid #333;
+      border-radius: 2px;
+      pointer-events: auto;
+    }
+
+    /* Modal / Settings Style */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(8px);
+    }
+    .modal-content {
+      background: #1f2937;
+      padding: 30px;
+      border-radius: 16px;
+      width: 400px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .modal-content h2 { margin-top: 0; font-size: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .shortcut-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .kdb-key { background: #374151; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-family: monospace; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+    .close-modal-btn { background: var(--accent); color: #000; border: none; padding: 10px; width: 100%; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+    .close-modal-btn:hover { background: var(--accent-hover); }
+
+  </style>
+</head>
+<body>
+  <div class="bg-rays"></div>
+
+  <div class="editor-container">
+    <div class="top-toolbar">
+      <div class="tools-group">
+        <button class="icon-btn tool-btn" data-tool="select" title="Seçim (V)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg></button>
+        <button class="icon-btn tool-btn" data-tool="crop" title="Kırp (C)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></button>
+        <button class="icon-btn tool-btn active" data-tool="rect" title="Dikdörtgen (R)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg></button>
+        <button class="icon-btn tool-btn" data-tool="pen" title="Kalem (P)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></button>
+        <button class="icon-btn tool-btn" data-tool="arrow" title="Ok Çiz (A)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></button>
+        <button class="icon-btn tool-btn" data-tool="text" title="Metin Ekle (T)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></button>
+        <button class="icon-btn tool-btn" data-tool="eraser" title="Silgi (E)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17L11.5 8 16 12.5 7 21.5z"/><path d="M22 22H7"/><path d="M11 8l5-5c1.4-1.4 3.6-1.4 5 0 1.4 1.4 1.4 3.6 0 5l-5 5"/></svg></button>
+        
+        <div class="tool-divider"></div>
+        
+        <div class="color-btn-wrapper" title="Renk Seç">
+          <div class="color-preview" id="colorPrev"></div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted)"><polyline points="6 9 12 15 18 9"/></svg>
+          <input type="color" id="colPicker" value="#22d3ee">
+        </div>
+      </div>
+
+      <div class="tools-group">
+        <button class="icon-btn" id="btn-undo" title="Geri Al (Ctrl+Z)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+        <button class="icon-btn" id="btn-file" title="Resim Yükle" onclick="document.getElementById('fileUpload').click()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+        <input type="file" id="fileUpload" style="display:none" accept="image/*">
+
+        
+        <div class="tool-divider"></div>
+        
+        <div class="zoom-controls">
+          <button id="btn-zoom-out">-</button>
+          <span id="zoom-label">100%</span>
+          <button id="btn-zoom-in">+</button>
+        </div>
+        
+        <div class="tool-divider"></div>
+        <button class="icon-btn" id="btn-settings" title="Ayarlar & Kısayollar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </div>
+    </div>
+
+    <div class="workspace" id="canvasContainer">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="bgCanvas"></canvas>
+        <canvas id="drawCanvas"></canvas>
+        
+        <!-- Custom HTML-based crop overlay for better visuals -->
+        <div class="crop-overlay" id="cropOverlay">
+          <div class="crop-handle" style="top:-5px; left:-5px; cursor:nwse-resize;" data-handle="tl"></div>
+          <div class="crop-handle" style="top:-5px; right:-5px; cursor:nesw-resize;" data-handle="tr"></div>
+          <div class="crop-handle" style="bottom:-5px; left:-5px; cursor:nesw-resize;" data-handle="bl"></div>
+          <div class="crop-handle" style="bottom:-5px; right:-5px; cursor:nwse-resize;" data-handle="br"></div>
+          
+          <div class="crop-handle" style="top:-5px; left:50%; transform:translateX(-50%); cursor:ns-resize;" data-handle="t"></div>
+          <div class="crop-handle" style="bottom:-5px; left:50%; transform:translateX(-50%); cursor:ns-resize;" data-handle="b"></div>
+          <div class="crop-handle" style="top:50%; left:-5px; transform:translateY(-50%); cursor:ew-resize;" data-handle="l"></div>
+          <div class="crop-handle" style="top:50%; right:-5px; transform:translateY(-50%); cursor:ew-resize;" data-handle="r"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-toolbar">
+      <div class="bottom-left">
+        <h3>Export</h3>
+      </div>
+      
+      <div class="export-formats">
+        <button class="format-btn active" data-fmt="png">PNG</button>
+        <button class="format-btn" data-fmt="jpg">JPG</button>
+        <button class="format-btn" data-fmt="pdf">PDF <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      </div>
+
+      <div class="bottom-right">
+        <button class="action-btn" id="btn-share" title="Paylaş veya Panoya Kopyala"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+        <button class="action-btn" id="btn-new" title="Yeni Yakala"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
+        <button class="btn-download" id="btn-download">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+      <h2><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Ayarlar & Kısayollar</h2>
+      
+      <div class="shortcut-row">
+        <span>Ekran Yakala (Seçim Modu)</span>
+        <span class="kdb-key">Alt + Shift + S</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Seçimden Çık</span>
+        <span class="kdb-key">Esc</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Geri Al</span>
+        <span class="kdb-key">Ctrl + Z</span>
+      </div>
+      <div class="shortcut-row">
+        <span>Silgi</span>
+        <span class="kdb-key">E</span>
+      </div>
+
+      <p style="font-size: 12px; color: var(--text-muted); margin-top: 20px;">
+        Not: Ana kısayolu Chrome Uzantılar > Kısayollar sayfasından değiştirebilirsiniz.
+      </p>
+
+      <button class="close-modal-btn" id="closeSettings">Kapat</button>
+    </div>
+  </div>
+
+  <script src="editor.js"></script>
+</body>
+</html>
