@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['capturedImage'], (result) => {
         if (result.capturedImage) loadImageData(result.capturedImage);
-        else console.log("Test modu: Lütfen dosya yükleyin.");
+        else console.log(chrome.i18n.getMessage("testMode"));
       });
     }
   
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
       if (currentTool === 'crop') {
          if (Math.abs(w) > 20 && Math.abs(h) > 20) {
-           if (confirm("Bu bölgeyi kırpmak onaylıyor musunuz?")) applyCrop(startX, startY, w, h);
+           if (confirm(chrome.i18n.getMessage("confirmCrop"))) applyCrop(startX, startY, w, h);
          }
          cropOverlay.style.display = 'none';
          const selectBtn = document.querySelector('[data-tool="select"]');
@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
          
       } else if (currentTool === 'text') {
           // Metinler fare bırakılınca oluşur.
-          const txt = prompt("Metin girin:");
+          const txt = prompt(chrome.i18n.getMessage("promptText"));
           if (txt && txt.trim() !== "") { 
               activeItem.text = txt; 
               drawItems.push(activeItem);
@@ -516,8 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = off.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,off.width,off.height);
         ctx.drawImage(bgCanvas, 0, 0); ctx.drawImage(drawCanvas, 0, 0);
         link.href = off.toDataURL('image/jpeg', 0.9); link.click();
-      } else if (fmt === 'pdf') {
-        if (!window.jspdf) return alert("jsPDF modülü yüklenemedi.");
+      } else if (currentTool === 'pdf') {
+        if (!window.jspdf) return alert(chrome.i18n.getMessage("alertError") + "jsPDF module not loaded.");
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: bgCanvas.width>bgCanvas.height?'l':'p', unit:'px', format:[bgCanvas.width,bgCanvas.height]});
         pdf.addImage(mergeCanvases(), 'PNG', 0, 0, bgCanvas.width, bgCanvas.height);
@@ -530,12 +530,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch(mergeCanvases());
         const blob = await res.blob();
         await navigator.clipboard.write([new ClipboardItem({[blob.type]: blob})]);
-        alert("Görüntü panoya kopyalandı!");
-      } catch(e) { alert("Hata: " + e); }
+        alert(chrome.i18n.getMessage("alertClipboard"));
+      } catch(e) { alert(chrome.i18n.getMessage("alertError") + e); }
     });
   
     document.getElementById('btn-new').addEventListener('click', () => {
       if(typeof chrome !== 'undefined' && chrome.tabs) window.close();
-      else alert("Test modu (eklenti kapandı).");
+      else alert(chrome.i18n.getMessage("testModePluginClose"));
     });
+
+    // --- I18N DOM Initialization ---
+    function localizeDOM() {
+      const elements = document.querySelectorAll('[data-i18n]');
+      elements.forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const message = chrome.i18n.getMessage(key);
+        if (message) {
+          if (el.tagName === 'INPUT' && el.type === 'button') el.value = message;
+          else if (el.hasAttribute('title')) el.title = message;
+          else el.textContent = message;
+        }
+      });
+      // Handle tooltips correctly for icons
+      const tooltips = document.querySelectorAll('[data-i18n-title]');
+      tooltips.forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        const message = chrome.i18n.getMessage(key);
+        if (message) el.title = message;
+      });
+    }
+    localizeDOM();
   });

@@ -85,7 +85,7 @@
       
       const geometry = buildGeometry(target);
       if (!geometry) {
-        alert("Element boyutu hatalı.");
+        alert(chrome.i18n.getMessage("errorSize"));
         return;
       }
       

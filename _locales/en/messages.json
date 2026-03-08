@@ -1,0 +1,150 @@
+{
+  "extensionName": {
+    "message": "Element Snap MVP",
+    "description": "The name of the extension."
+  },
+  "extensionDescription": {
+    "message": "Snap web elements and annotate them easily.",
+    "description": "The description of the extension."
+  },
+  "actionTitle": {
+    "message": "Capture & Edit",
+    "description": "Title for the extension action button."
+  },
+  "commandDescription": {
+    "message": "Start Screenshot / Selection Mode",
+    "description": "Description for the keyboard shortcut command."
+  },
+  "errorSize": {
+    "message": "Element size is invalid.",
+    "description": "Error message when element size is zero or negative."
+  },
+  "editorTitle": {
+    "message": "Element Snap Premium Editor",
+    "description": "Title displayed in the editor page."
+  },
+  "toolSelect": {
+    "message": "Select (V)",
+    "description": "Tooltip for selection tool."
+  },
+  "toolCrop": {
+    "message": "Crop (C)",
+    "description": "Tooltip for crop tool."
+  },
+  "toolRect": {
+    "message": "Rectangle (R)",
+    "description": "Tooltip for rectangle tool."
+  },
+  "toolPen": {
+    "message": "Pen (P)",
+    "description": "Tooltip for pen tool."
+  },
+  "toolArrow": {
+    "message": "Arrow (A)",
+    "description": "Tooltip for arrow tool."
+  },
+  "toolText": {
+    "message": "Add Text (T)",
+    "description": "Tooltip for text tool."
+  },
+  "toolEraser": {
+    "message": "Eraser (E)",
+    "description": "Tooltip for eraser tool."
+  },
+  "toolColor": {
+    "message": "Pick Color",
+    "description": "Tooltip for color picker."
+  },
+  "toolUndo": {
+    "message": "Undo (Ctrl+Z)",
+    "description": "Tooltip for undo button."
+  },
+  "toolUpload": {
+    "message": "Upload Image",
+    "description": "Tooltip for upload button."
+  },
+  "toolSettings": {
+    "message": "Settings & Shortcuts",
+    "description": "Tooltip for settings button."
+  },
+  "labelExport": {
+    "message": "Export",
+    "description": "Label for the export section."
+  },
+  "btnDownload": {
+    "message": "Download",
+    "description": "Text for the download button."
+  },
+  "btnShare": {
+    "message": "Share or Copy to Clipboard",
+    "description": "Tooltip for share button."
+  },
+  "btnNew": {
+    "message": "Capture New",
+    "description": "Tooltip for new capture button."
+  },
+  "settingsTitle": {
+    "message": "Settings & Shortcuts",
+    "description": "Title of the settings modal."
+  },
+  "shortcutCapture": {
+    "message": "Capture Screen (Selection Mode)",
+    "description": "Label for capture shortcut."
+  },
+  "shortcutExit": {
+    "message": "Exit Selection",
+    "description": "Label for exit shortcut."
+  },
+  "shortcutUndo": {
+    "message": "Undo",
+    "description": "Label for undo shortcut."
+  },
+  "shortcutEraser": {
+    "message": "Eraser",
+    "description": "Label for eraser shortcut."
+  },
+  "settingsNote": {
+    "message": "Note: You can change the main shortcut from Chrome Extensions > Shortcuts page.",
+    "description": "Note in the settings modal."
+  },
+  "btnClose": {
+    "message": "Close",
+    "description": "Text for close buttons."
+  },
+  "confirmCrop": {
+    "message": "Do you want to crop this area?",
+    "description": "Confirmation prompt for cropping."
+  },
+  "promptText": {
+    "message": "Enter text:",
+    "description": "Prompt for text tool input."
+  },
+  "alertClipboard": {
+    "message": "Image copied to clipboard!",
+    "description": "Alert when image is copied to clipboard."
+  },
+  "alertError": {
+    "message": "Error: ",
+    "description": "Prefix for error alerts."
+  },
+  "testMode": {
+    "message": "Test mode: Please upload a file.",
+    "description": "Message in test mode without captured image."
+  },
+  "testModePluginClose": {
+    "message": "Test mode (extension closed).",
+    "description": "Message when extension window closes in test mode."
+  },
+  "fmtPng": {
+    "message": "PNG",
+    "description": "PNG format label."
+  },
+  "fmtJpg": {
+    "message": "JPG",
+    "description": "JPG format label."
+  },
+  "fmtPdf": {
+    "message": "PDF",
+    "description": "PDF format label."
+  }
+}
