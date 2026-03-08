@@ -516,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = off.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,off.width,off.height);
         ctx.drawImage(bgCanvas, 0, 0); ctx.drawImage(drawCanvas, 0, 0);
         link.href = off.toDataURL('image/jpeg', 0.9); link.click();
-      } else if (currentTool === 'pdf') {
+      } else if (fmt === 'pdf') {
         if (!window.jspdf) return alert(chrome.i18n.getMessage("alertError") + "jsPDF module not loaded.");
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: bgCanvas.width>bgCanvas.height?'l':'p', unit:'px', format:[bgCanvas.width,bgCanvas.height]});
