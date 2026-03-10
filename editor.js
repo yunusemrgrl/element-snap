@@ -77,6 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
       }
     });
+
+    document.getElementById('btn-file').addEventListener('click', () => {
+      document.getElementById('fileUpload').click();
+    });
   
     // ---------------------------------------------------------
     // UI: TOOLS
