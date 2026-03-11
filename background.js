@@ -1,7 +1,8 @@
-// background.js - Element Snap Premium (Node Capture)
+// background.js - Element Snap Premium (Multi-Mode Capture)
 
-const DEBUGGER_VERSION = "1.3";
+const DEBUGGER_VERSION = '1.3';
 
+// ── Debugger Helpers ──────────────────────────────────────────────────────────
 function attachDebugger(target) {
   return new Promise((resolve, reject) => {
     chrome.debugger.attach(target, DEBUGGER_VERSION, () => {
@@ -26,81 +27,116 @@ function sendDebuggerCommand(target, method, params = {}) {
   });
 }
 
-async function captureNodeScreenshot(tabId, geometry) {
+// ── Save & Open Editor ────────────────────────────────────────────────────────
+function openEditor(dataUrl) {
+  chrome.storage.local.set({ capturedImage: dataUrl }, () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('editor.html') });
+  });
+}
+
+// ── Mode: Element / Custom Size ───────────────────────────────────────────────
+// Both use the debugger with a clip rect
+async function captureWithClip(tabId, geometry) {
   const target = { tabId };
   let attached = false;
-
   try {
     await attachDebugger(target);
     attached = true;
+    await sendDebuggerCommand(target, 'Page.enable');
 
-    await sendDebuggerCommand(target, "Page.enable");
-    await sendDebuggerCommand(target, "Runtime.enable");
-
-    // Ekranda seçilen objenin ekran görüntüsünü Page.captureScreenshot ile
-    // clip (kesim koordinati) parametresini kullanarak asıl kalitede al.
-    const screenshot = await sendDebuggerCommand(target, "Page.captureScreenshot", {
-      format: "png",
+    const { data } = await sendDebuggerCommand(target, 'Page.captureScreenshot', {
+      format: 'png',
       fromSurface: true,
       captureBeyondViewport: true,
       clip: {
-        x: geometry.x,
-        y: geometry.y,
-        width: geometry.width,
-        height: geometry.height,
-        scale: 1 // Windows Cihaz scale oranı ayarlanabilir isteğe göre 
+        x: geometry.x, y: geometry.y,
+        width: geometry.width, height: geometry.height,
+        scale: 1
       }
     });
-
-    if (!screenshot || !screenshot.data) throw new Error("screenshot-failed");
-
-    const dataUrl = "data:image/png;base64," + screenshot.data;
-
-    chrome.storage.local.set({ capturedImage: dataUrl }, () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL("editor.html") });
-    });
-
-  } catch (error) {
-    console.error("Capture Error:", error);
+    if (!data) throw new Error('screenshot-failed');
+    openEditor('data:image/png;base64,' + data);
+  } catch (err) {
+    console.error('[Element Snap] Capture error:', err);
   } finally {
-    if (attached) {
-      await detachDebugger(target);
-    }
+    if (attached) await detachDebugger(target);
   }
 }
 
-// Mesaj dinleyici - İçerik scriptinden gelen screenshot emri 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "capture-node-screenshot" && sender.tab) {
-    captureNodeScreenshot(sender.tab.id, message.geometry);
-    // Asenkron olduğu için true dönmüyoruz, yanıt gerekmiyor, ekran açılacak.
+// ── Mode: Full Page ───────────────────────────────────────────────────────────
+// No clip → captures entire page beyond the viewport scroll
+async function captureFullPage(tabId) {
+  const target = { tabId };
+  let attached = false;
+  try {
+    await attachDebugger(target);
+    attached = true;
+    await sendDebuggerCommand(target, 'Page.enable');
+
+    // Get full page dimensions via Runtime
+    const { result } = await sendDebuggerCommand(target, 'Runtime.evaluate', {
+      expression: 'JSON.stringify({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight })',
+      returnByValue: true
+    });
+    const { w, h } = JSON.parse(result.value);
+
+    const { data } = await sendDebuggerCommand(target, 'Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+      captureBeyondViewport: true,
+      clip: { x: 0, y: 0, width: w, height: h, scale: 1 }
+    });
+    if (!data) throw new Error('screenshot-failed');
+    openEditor('data:image/png;base64,' + data);
+  } catch (err) {
+    console.error('[Element Snap] Full page error:', err);
+  } finally {
+    if (attached) await detachDebugger(target);
+  }
+}
+
+// ── Mode: Visible Tab ─────────────────────────────────────────────────────────
+// Simple — no debugger needed
+async function captureVisibleTab(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    openEditor(dataUrl);
+  } catch (err) {
+    console.error('[Element Snap] Tab capture error:', err);
+  }
+}
+
+// ── Message Router ────────────────────────────────────────────────────────────
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (!sender.tab) return;
+  const tabId = sender.tab.id;
+
+  switch (message.type) {
+    case 'capture-node-screenshot':
+      captureWithClip(tabId, message.geometry);
+      break;
+    case 'capture-fullpage':
+      captureFullPage(tabId);
+      break;
+    case 'capture-visible-tab':
+      captureVisibleTab(tabId);
+      break;
   }
 });
 
-// Toolbar ikonuna veya kısayola tıklandığında
+// ── Action Click / Keyboard Shortcut ─────────────────────────────────────────
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab || !tab.id || tab.url.startsWith('chrome://')) {
-    console.warn("Bu sayfada eklenti çalıştırılamaz.");
-    return;
-  }
-
+  if (!tab?.id || tab.url?.startsWith('chrome://')) return;
   try {
-    // Önce content script'in orada olup olmadığını kontrol et
-    await chrome.tabs.sendMessage(tab.id, { type: "toggle-selection-mode" });
-  } catch (error) {
-    // Eğer mesaj başarısız olursa (script yüklenmemişse), scripti elle enjekte et
-    console.log("Content script bulunamadı, yeniden enjekte ediliyor...");
+    await chrome.tabs.sendMessage(tab.id, { type: 'toggle-selection-mode' });
+  } catch {
+    // Content script not injected yet — inject it first
     try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
-      // Enjeksiyondan sonra tekrar dene
-      setTimeout(() => {
-        chrome.tabs.sendMessage(tab.id, { type: "toggle-selection-mode" });
-      }, 100);
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      setTimeout(() => chrome.tabs.sendMessage(tab.id, { type: 'toggle-selection-mode' }), 120);
     } catch (err) {
-      console.error("Script enjeksiyonu başarısız:", err);
+      console.error('[Element Snap] Injection failed:', err);
     }
   }
 });
