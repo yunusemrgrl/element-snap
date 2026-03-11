@@ -126,17 +126,27 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 });
 
 
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab?.id || tab.url?.startsWith('chrome://')) return;
+// Returns true only for pages where content scripts can be injected
+function isInjectable(url) {
+  if (!url) return false;
+  const blocked = ['chrome://', 'chrome-extension://', 'edge://', 'about:', 'data:', 'file://'];
+  return !blocked.some(prefix => url.startsWith(prefix));
+}
+
+async function injectAndSend(tabId, messageType) {
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: 'toggle-selection-mode' });
+    await chrome.tabs.sendMessage(tabId, { type: messageType });
   } catch {
-    // Content script not injected yet — inject it first
     try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-      setTimeout(() => chrome.tabs.sendMessage(tab.id, { type: 'toggle-selection-mode' }), 120);
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+      setTimeout(() => chrome.tabs.sendMessage(tabId, { type: messageType }), 120);
     } catch (err) {
-      console.error('[Element Snap] Injection failed:', err);
+      console.warn('[Element Snap] Cannot inject on this page:', err.message);
     }
   }
+}
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab?.id || !isInjectable(tab.url)) return;
+  await injectAndSend(tab.id, 'toggle-selection-mode');
 });
