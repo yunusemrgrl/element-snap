@@ -133,20 +133,19 @@ function isInjectable(url) {
   return !blocked.some(prefix => url.startsWith(prefix));
 }
 
-async function injectAndSend(tabId, messageType) {
+async function ensureInjected(tabId) {
   try {
-    await chrome.tabs.sendMessage(tabId, { type: messageType });
+    // Check if already injected
+    await chrome.tabs.sendMessage(tabId, { type: 'ping' });
   } catch {
-    try {
-      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
-      setTimeout(() => chrome.tabs.sendMessage(tabId, { type: messageType }), 120);
-    } catch (err) {
-      console.warn('[Element Snap] Cannot inject on this page:', err.message);
-    }
+    // If not, inject
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
   }
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab?.id || !isInjectable(tab.url)) return;
-  await injectAndSend(tab.id, 'toggle-selection-mode');
+  await ensureInjected(tab.id);
+  chrome.tabs.sendMessage(tab.id, { type: 'toggle-selection-mode' });
 });
+

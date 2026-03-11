@@ -324,6 +324,9 @@
 
   // ── Message Listener ───────────────────────────────────────────────────────
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === 'ping') {
+      sendResponse({ ok: true });
+    }
     if (message?.type === 'toggle-selection-mode') {
       if (modePicker) { hideAll(); }
       else { showModePicker(); }
