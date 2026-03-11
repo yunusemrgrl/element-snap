@@ -296,6 +296,13 @@
   // ── Event Listeners ────────────────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
+    // Ctrl+Alt+S → direct element selection (bypass mode picker)
+    if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      hideAll();
+      enableSelectionMode();
+      return;
+    }
     if (e.key === 'Escape') { e.preventDefault(); hideAll(); }
   }, true);
 
