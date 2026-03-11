@@ -322,6 +322,11 @@
       else { showModePicker(); }
       sendResponse({ ok: true });
     }
+    if (message?.type === 'start-element-mode') {
+      hideAll();
+      enableSelectionMode();
+      sendResponse({ ok: true });
+    }
     return false;
   });
 

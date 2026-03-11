@@ -45,6 +45,13 @@
         "mac": "Alt+Shift+S"
       },
       "description": "__MSG_commandDescription__"
+    },
+    "quick-element": {
+      "suggested_key": {
+        "default": "Ctrl+Alt+S",
+        "mac": "MacCtrl+Alt+S"
+      },
+      "description": "Directly start element selection mode"
     }
   }
 }

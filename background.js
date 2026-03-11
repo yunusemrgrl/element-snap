@@ -125,7 +125,23 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   }
 });
 
-// ── Action Click / Keyboard Shortcut ─────────────────────────────────────────
+// ── Keyboard Command: quick-element (Ctrl+Alt+S) ─────────────────────────────
+// Directly starts element selection, skipping the mode picker
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'quick-element') return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id || tab.url?.startsWith('chrome://')) return;
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'start-element-mode' });
+  } catch {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      setTimeout(() => chrome.tabs.sendMessage(tab.id, { type: 'start-element-mode' }), 120);
+    } catch (err) {
+      console.error('[Element Snap] Quick element injection failed:', err);
+    }
+  }
+});
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab?.id || tab.url?.startsWith('chrome://')) return;
   try {
